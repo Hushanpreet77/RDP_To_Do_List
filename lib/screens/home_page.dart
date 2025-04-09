@@ -25,7 +25,7 @@ class _HomePageState extends State<HomePage> {
     fetchTasks();
   }
 
-  //Fetch tasks  from the db and also update the tasks list in memory
+  //Fetch tasks from the db and also update the task list in memory
   Future<void> fetchTasks() async {
     final snapshots = await db.collection('tasks').orderBy('timestamp').get();
 
@@ -35,7 +35,7 @@ class _HomePageState extends State<HomePage> {
         snapshots.docs.map(
           (doc) => {
             'id': doc.id,
-            'name': doc['name'],
+            'name': doc.get('name'),
             'completed': doc.get('completed') ?? false,
           },
         ),
@@ -47,11 +47,11 @@ class _HomePageState extends State<HomePage> {
   Future<void> addTask() async {
     final taskName = nameController.text.trim();
 
-    if (taskName.isNoEmpty) {
+    if (taskName.isNotEmpty) {
       final newTask = {
         'name': taskName,
         'completed': false,
-        'timestamp': DateTime.now(),
+        'timestamp': FieldValue.serverTimestamp(),
       };
     }
   }
@@ -76,19 +76,23 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      body: Column(
-        children: [
-          Column(
-            children: [
-              TableCalendar(
+      body: SafeArea(
+        child: Column(
+          children: [
+            SizedBox(
+              height: 340,
+              child: TableCalendar(
                 calendarFormat: CalendarFormat.month,
                 focusedDay: DateTime.now(),
                 firstDay: DateTime(2025),
                 lastDay: DateTime(2026),
               ),
-            ],
-          ),
-        ],
+            ),
+            Expanded(
+              child: Container(child: buildAddTaskSection(nameController)),
+            ),
+          ],
+        ),
       ),
       drawer: Drawer(),
     );
@@ -101,13 +105,12 @@ Widget buildAddTaskSection(nameController) {
     padding: const EdgeInsets.all(12.0),
     child: Row(
       children: [
-        Container(
-          decoration: BoxDecoration(color: Colors.white),
+        Expanded(
           child: TextField(
             maxLength: 32,
             controller: nameController,
             decoration: InputDecoration(
-              labelText: ' Add Task',
+              labelText: 'Add Task',
               border: OutlineInputBorder(),
             ),
           ),
@@ -121,7 +124,6 @@ Widget buildAddTaskSection(nameController) {
 Widget buildTaskList(tasks) {
   return ListView.builder(
     physics: NeverScrollableScrollPhysics(),
-    shrinkWrap: true,
     itemCount: tasks.length,
     itemBuilder: (context, index) {
       return ListTile(
