@@ -25,7 +25,7 @@ class _HomePageState extends State<HomePage> {
     fetchTasks();
   }
 
-  //Fetch tasks from the db and also update the task list in memory
+  //Fetch tasks  from the db and also update the tasks list in memory
   Future<void> fetchTasks() async {
     final snapshots = await db.collection('tasks').orderBy('timestamp').get();
 
@@ -35,7 +35,7 @@ class _HomePageState extends State<HomePage> {
         snapshots.docs.map(
           (doc) => {
             'id': doc.id,
-            'name': doc.get('name'),
+            'name': doc['name'],
             'completed': doc.get('completed') ?? false,
           },
         ),
@@ -43,7 +43,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  //function add new tasks to local state & firestore database
+  //function add new task to local state & firestore database
   Future<void> addTask() async {
     final taskName = nameController.text.trim();
 
@@ -53,9 +53,19 @@ class _HomePageState extends State<HomePage> {
         'completed': false,
         'timestamp': FieldValue.serverTimestamp(),
       };
+    
+
+    //docRef gives us the insertion id from the document
+
+    final docRef = await db.collection('tasks').add(newTask);
+
+    //add the tasks locally
+    setState(() {
+      tasks.add({'id': docRef.id, ...newTask});
+       });
+       nameController.clear();
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -89,7 +99,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             Expanded(
-              child: Container(child: buildAddTaskSection(nameController)),
+              child: Container(child: buildAddTaskSection(nameController, addTask)),
             ),
           ],
         ),
@@ -100,7 +110,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 //Build the section for adding tasks
-Widget buildAddTaskSection(nameController) {
+Widget buildAddTaskSection(nameController, addTask) {
   return Padding(
     padding: const EdgeInsets.all(12.0),
     child: Row(
@@ -110,12 +120,14 @@ Widget buildAddTaskSection(nameController) {
             maxLength: 32,
             controller: nameController,
             decoration: InputDecoration(
-              labelText: 'Add Task',
+              labelText: ' Add Task',
               border: OutlineInputBorder(),
             ),
           ),
         ),
-        ElevatedButton(onPressed: null, child: Text('Add Task')),
+        ElevatedButton(
+          onPressed: addTask, child: Text('Add Task'),
+        ),
       ],
     ),
   );
@@ -124,6 +136,7 @@ Widget buildAddTaskSection(nameController) {
 Widget buildTaskList(tasks) {
   return ListView.builder(
     physics: NeverScrollableScrollPhysics(),
+    shrinkWrap: true,
     itemCount: tasks.length,
     itemBuilder: (context, index) {
       return ListTile(
